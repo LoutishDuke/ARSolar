@@ -10,34 +10,77 @@ import UIKit
 import SceneKit
 import ARKit
 
-class ViewController: UIViewController, ARSCNViewDelegate {
+class ViewController: UIViewController, ARSCNViewDelegate, UIPickerViewDelegate, UIPickerViewDataSource  {
+    
 
     @IBOutlet var sceneView: ARSCNView!
+    @IBOutlet weak var picker: UIPickerView!
     
+    var bodyModelArr : [BodyModel] = [BodyModel]()
+    var node : SCNNode = SCNNode()
+    var pickerData : [String] = [String]()
+    var selectedBody : Int = 0
+    
+    func populateBodyModelArray() {
+        let solModel = BodyModel(bodyName: "Sol", imageFile: "art.scnassets/sun.jpg", radius: 0.6)
+        let earthModel = BodyModel(bodyName: "Earth", imageFile: "art.scnassets/earth.jpg", radius: 0.2)
+        let moonModel = BodyModel(bodyName: "Moon", imageFile: "art.scnassets/moon.jpg", radius: 0.1)
+        
+        
+        self.bodyModelArr.append(solModel)
+        self.bodyModelArr.append(earthModel)
+        self.bodyModelArr.append(moonModel)
+    }
+    
+    func getBodyNames() -> [String] {
+        var arr : [String] = []
+        for s in self.bodyModelArr{
+            arr.append(s.bodyName)
+        }
+        return arr
+    }
+    
+    func setModelTexture(){
+        let sphere = SCNSphere(radius: CGFloat(bodyModelArr[selectedBody].radius))
+        let material = SCNMaterial()
+        material.diffuse.contents = UIImage(named: bodyModelArr[selectedBody].imageFile)
+        sphere.materials = [material]
+        
+        self.node.geometry = sphere
+        sceneView.scene.rootNode.addChildNode(self.node)
+        sceneView.autoenablesDefaultLighting = true
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Set the view's delegate
         sceneView.delegate = self
         
-        // Show statistics such as fps and timing information
-        sceneView.showsStatistics = true
+        populateBodyModelArray()
         
-        // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
         
-        // Set the scene to the view
-        sceneView.scene = scene
+        self.picker.delegate = self
+        self.picker.dataSource = self
+        
+        pickerData = getBodyNames()
+        
+        
+        
+        self.node.position = SCNVector3(0, 0.1, -2)
+        
+        setModelTexture()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        // Create a session configuration
-        let configuration = ARWorldTrackingConfiguration()
-
+        var configuration : ARConfiguration? = AROrientationTrackingConfiguration()
+        if ARWorldTrackingConfiguration.isSupported {
+            // Create a session configuration
+            configuration = ARWorldTrackingConfiguration()
+        }
         // Run the view's session
-        sceneView.session.run(configuration)
+        sceneView.session.run(configuration!)
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -46,30 +89,21 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Pause the view's session
         sceneView.session.pause()
     }
-
-    // MARK: - ARSCNViewDelegate
     
-/*
-    // Override to create and configure nodes for anchors added to the view's session.
-    func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
-        let node = SCNNode()
-     
-        return node
-    }
-*/
-    
-    func session(_ session: ARSession, didFailWithError error: Error) {
-        // Present an error message to the user
-        
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        1
     }
     
-    func sessionWasInterrupted(_ session: ARSession) {
-        // Inform the user that the session has been interrupted, for example, by presenting an overlay
-        
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return pickerData.count
     }
     
-    func sessionInterruptionEnded(_ session: ARSession) {
-        // Reset tracking and/or remove existing anchors if consistent tracking is required
-        
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return pickerData[row]
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        self.selectedBody = row
+        self.setModelTexture()
     }
 }
